@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using GameFunctions;
@@ -13,6 +14,24 @@ namespace SaveLoadTutorial {
             float posY = 5;
             Vector2 pos = new Vector2(posX, posY);
             ctx.role.SetPos(pos);
+
+            ctx.rooms.Add(1, CreatRoom());
+            ctx.rooms.Add(2, CreatRoom());
+
+        }
+
+        static int roomIDRecord = 0;
+        static RoomEntity CreatRoom() {
+            RoomEntity room = new RoomEntity();
+            room.id = roomIDRecord++;
+            room.roles = new RoleEntity[UnityEngine.Random.Range(1, 5)];
+            for (int i = 0; i < room.roles.Length; i++) {
+                var role = new GameObject("ROLE").AddComponent<RoleEntity>();
+                role.id = i;
+                role.SetPos(UnityEngine.Random.insideUnitCircle * 5);
+                room.roles[i] = role;
+            }
+            return room;
         }
 
         // ==== 原理 ====
@@ -22,8 +41,9 @@ namespace SaveLoadTutorial {
 
             // Type1: 字符串
             // pos = LoadType1();
-            pos = LoadType2();
+            // pos = LoadType2();
             // pos = LoadType3();
+            LoadType4(ctx);
 
             ctx.role.SetPos(pos);
 
@@ -35,8 +55,9 @@ namespace SaveLoadTutorial {
 
             // Type1: 字符串
             // SaveType1(pos);
-            SaveType2(pos);
+            // SaveType2(pos);
             // SaveType3(pos);
+            SaveType4(ctx);
 
         }
 
@@ -103,6 +124,88 @@ namespace SaveLoadTutorial {
         static Vector2 LoadType3() {
             string str = File.ReadAllText("slot1.save", System.Text.Encoding.UTF8);
             return JsonUtility.FromJson<Vector2>(str);
+        }
+        #endregion
+
+        #region Type4: BufferEncoder, Room
+        static void SaveType4(GameContext ctx) {
+            byte[] data = new byte[200 * 1024 * 1024];
+            int offset = 4;
+            foreach (var room in ctx.rooms.Values) {
+                RoomSaveMessage message = new RoomSaveMessage();
+                message.id = room.id;
+                message.roles = new List<RoleSaveMessage>(room.roles.Length);
+                for (int i = 0; i < room.roles.Length; i++) {
+                    RoleEntity role = room.roles[i];
+                    RoleSaveMessage roleMessage = new RoleSaveMessage();
+                    roleMessage.id = role.id;
+                    roleMessage.pos = role.transform.position;
+                    message.roles.Add(roleMessage);
+                }
+
+                message.WriteTo(data, ref offset);
+            }
+
+            int length = offset;
+            offset = 0;
+            GFBufferEncoderWriter.WriteUInt32(data, (uint)length, ref offset);
+
+            // 语法糖
+            // using (FileStream fs = new FileStream("slot1.save", FileMode.Create)) {
+            //     fs.Write(data, 0, offset);
+            // }
+
+            // 本质
+            // GC 不托管 Stream
+            FileStream fs = new FileStream("slot1.save", FileMode.Create);
+            try {
+                fs.Write(data, 0, length);
+            } finally {
+                fs.Dispose();
+            }
+
+            // 打印房间信息
+            foreach (var room in ctx.rooms.Values) {
+                Debug.Log("Room ID: " + room.id);
+                foreach (var role in room.roles) {
+                    Debug.Log("\tRole ID: " + role.id + " Pos: " + role.transform.position);
+                }
+            }
+
+        }
+
+        static void LoadType4(GameContext ctx) {
+            byte[] data = File.ReadAllBytes("slot1.save");
+            int offset = 0;
+            int length = (int)GFBufferEncoderReader.ReadUInt32(data, ref offset);
+            // Load Game
+            while (offset < length) {
+
+                RoomSaveMessage roomMsg = new RoomSaveMessage();
+                roomMsg.FromBytes(data, ref offset);
+
+                RoomEntity room = new RoomEntity();
+                room.id = roomMsg.id;
+                room.roles = new RoleEntity[roomMsg.roles.Count];
+                for (int i = 0; i < roomMsg.roles.Count; i++) {
+                    RoleSaveMessage roleMessage = roomMsg.roles[i];
+                    RoleEntity role = new GameObject("ROLE").AddComponent<RoleEntity>();
+                    role.id = roleMessage.id;
+                    role.SetPos(roleMessage.pos);
+                    room.roles[i] = role;
+                }
+                ctx.rooms.Add(room.id, room);
+
+            }
+
+            // 打印房间信息
+            foreach (var room in ctx.rooms.Values) {
+                Debug.Log("Room ID: " + room.id);
+                foreach (var role in room.roles) {
+                    Debug.Log("\tRole ID: " + role.id + " Pos: " + role.transform.position);
+                }
+            }
+
         }
         #endregion
 

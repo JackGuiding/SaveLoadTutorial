@@ -6,6 +6,8 @@ namespace SaveLoadTutorial {
 
     public class RoleEntity : MonoBehaviour {
 
+        public int id;
+
         public void SetPos(Vector2 pos) {
             transform.position = pos;
         }
