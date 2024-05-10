@@ -6,12 +6,32 @@ namespace SaveLoadTutorial {
 
     public class Main : MonoBehaviour {
 
-        void Start() {
-            Debug.Log("Hello");
+        [SerializeField] Panel_Login p_login;
+
+        GameContext ctx;
+
+        void Awake() {
+
+            p_login.Ctor();
+
+            p_login.OnNewGameHandle = () => {
+                GameBusiness.NewGame();
+                p_login.Hide();
+            };
+
+            p_login.OnLoadHandle = () => {
+                GameBusiness.LoadGame();
+                p_login.Hide();
+            };
+
+            ctx = new GameContext();
+
         }
 
         void Update() {
-
+            if (Input.GetKeyUp(KeyCode.O)) {
+                GameBusiness.SaveGame();
+            }
         }
 
     }
