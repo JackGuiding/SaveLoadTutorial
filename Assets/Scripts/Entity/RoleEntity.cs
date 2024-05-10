@@ -12,7 +12,7 @@ namespace SaveLoadTutorial {
 
         void Update() {
             Vector2 moveAxis = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-            transform.position += (Vector3)moveAxis * Time.deltaTime;
+            transform.position += (Vector3)moveAxis * Time.deltaTime * 5.5f;
         }
 
     }
