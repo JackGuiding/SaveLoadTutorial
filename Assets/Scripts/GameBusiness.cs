@@ -66,8 +66,8 @@ namespace SaveLoadTutorial {
         // Google: Protobuf
         #region Type2
         static void SaveType2(Vector2 pos) {
-            
-            byte[] data = new byte[1024]; // length 0 x 0 0 0 y 0 0 0
+
+            byte[] data = new byte[200 * 1024 * 1024]; // length 0 x 0 0 0 y 0 0 0
             int offset = 2;
             GFBufferEncoderWriter.WriteSingle(data, pos.x, ref offset);
             GFBufferEncoderWriter.WriteSingle(data, pos.y, ref offset);
